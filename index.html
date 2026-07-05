@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF6-GIFMaker — Plan de reprise</title>
+<meta name="description" content="Tableau de bord des epics et sous-tâches du projet SF6-GIFMaker.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='6' y='30' width='26' height='40' rx='6' fill='%233DDC5B'/><rect x='37' y='30' width='26' height='40' rx='6' fill='%23FF3B4E'/><rect x='68' y='30' width='26' height='40' rx='6' fill='%233E8BFF'/></svg>">
+<style>
+  :root {
+    --bg: #0b0e1a;
+    --ink: #f2f5ff;
+    --ink-2: rgba(226, 233, 255, 0.72);
+    --ink-3: rgba(226, 233, 255, 0.45);
+    --glass-hi: rgba(255, 255, 255, 0.09);
+    --glass-lo: rgba(255, 255, 255, 0.04);
+    --edge: rgba(255, 255, 255, 0.14);
+    --edge-soft: rgba(255, 255, 255, 0.08);
+    --startup: #3ddc5b;   /* vert frame meter — à faire */
+    --active:  #ff3b4e;   /* rouge — en cours */
+    --recovery:#3e8bff;   /* bleu — fait */
+    --armor:   #9b6dff;   /* violet armure — attente jeu */
+    --invinc:  #f4f7ff;   /* blanc invincible — décision */
+    --radius: 22px;
+    --radius-s: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "SF Pro Text", -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- fond ambiant : halos colorés + grain acrylique ---- */
+  .scene {
+    position: fixed; inset: 0; z-index: -2; overflow: hidden;
+    background:
+      radial-gradient(42% 38% at 18% 12%, rgba(46, 107, 255, 0.38), transparent 70%),
+      radial-gradient(36% 34% at 85% 18%, rgba(255, 51, 85, 0.30), transparent 70%),
+      radial-gradient(40% 42% at 75% 88%, rgba(139, 92, 246, 0.28), transparent 70%),
+      radial-gradient(34% 30% at 12% 80%, rgba(25, 198, 176, 0.22), transparent 70%),
+      var(--bg);
+  }
+  .scene::after {
+    content: ""; position: absolute; inset: 0; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  /* ---- verre ---- */
+  .glass {
+    background: linear-gradient(180deg, var(--glass-hi), var(--glass-lo));
+    backdrop-filter: blur(26px) saturate(160%);
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    box-shadow: 0 14px 40px rgba(2, 5, 16, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* ---- hero ---- */
+  header.glass { padding: 34px 38px 30px; margin-bottom: 22px; }
+
+  .eyebrow {
+    font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: "Segoe UI Variable Display", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(30px, 4.6vw, 46px);
+    font-weight: 650; letter-spacing: -0.02em; line-height: 1.08;
+  }
+  h1 .thin { font-weight: 300; color: var(--ink-2); }
+
+  .sub { margin-top: 10px; max-width: 62ch; color: var(--ink-2); font-size: 15.5px; }
+
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12px; color: var(--ink-3);
+  }
+  .meta a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--edge); }
+  .meta a:hover { color: var(--ink); }
+
+  /* ---- frame meter global (signature) ---- */
+  .meter-block { margin-top: 26px; }
+  .meter-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; color: var(--ink-3); margin-bottom: 8px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  .meter { display: flex; gap: 3px; height: 26px; }
+  .meter.mini { height: 8px; gap: 2px; margin: 14px 0 16px; }
+  .meter span {
+    flex: 1; border-radius: 4px;
+    background: rgba(255, 255, 255, 0.10);
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+  .meter.mini span { border-radius: 2px; }
+  .meter span[data-s="fait"]    { background: var(--recovery); box-shadow: 0 0 10px rgba(62, 139, 255, 0.55); }
+  .meter span[data-s="encours"] { background: var(--active);   box-shadow: 0 0 12px rgba(255, 59, 78, 0.75); animation: pulse 1.6s ease-in-out infinite; }
+  .meter span[data-s="afaire"]  { background: color-mix(in srgb, var(--startup) 38%, transparent); }
+  .meter span[data-s="jeu"]     { background: color-mix(in srgb, var(--armor) 45%, transparent); }
+  .meter span[data-s="decision"]{ background: color-mix(in srgb, var(--invinc) 40%, transparent); }
+  .meter:not(.mini) span:hover  { transform: scaleY(1.18); filter: brightness(1.25); }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+  /* ---- légende (filtres) ---- */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .legend button {
+    display: inline-flex; align-items: center; gap: 7px;
+    font: inherit; font-size: 12.5px; color: var(--ink-2);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--edge-soft); border-radius: 100px;
+    padding: 5px 13px 5px 9px; cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  }
+  .legend button:hover { background: rgba(255, 255, 255, 0.10); }
+  .legend button:focus-visible { outline: 2px solid var(--recovery); outline-offset: 2px; }
+  .legend button .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .legend button b { font-weight: 600; color: var(--ink); }
+  body[data-filter] .legend button:not(.on) { opacity: 0.38; }
+  .legend .hint { flex-basis: 100%; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+  /* ---- prochaine action ---- */
+  .next {
+    display: flex; align-items: center; gap: 12px;
+    margin: 22px 0; padding: 14px 20px;
+    border-radius: var(--radius-s);
+    font-size: 14px; color: var(--ink-2);
+  }
+  .next .k {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--active); white-space: nowrap;
+  }
+  .next b { color: var(--ink); font-weight: 600; }
+
+  /* ---- grille d'epics ---- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .epic { padding: 26px 28px 20px; transition: transform 0.2s ease, border-color 0.2s ease; }
+  .epic:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.24); }
+
+  .epic-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .epic-head .eyebrow { margin-bottom: 6px; }
+  .prio {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 3px 10px; border-radius: 100px; white-space: nowrap;
+    border: 1px solid var(--edge); color: var(--ink-2);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .prio.p0 { color: #ffb3bb; border-color: rgba(255, 59, 78, 0.45); background: rgba(255, 59, 78, 0.12); }
+
+  .epic h2 {
+    font-family: "Segoe UI Variable Display", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 21px; font-weight: 640; letter-spacing: -0.01em;
+  }
+  .epic .desc { margin-top: 5px; font-size: 13.5px; color: var(--ink-2); }
+  .epic .count { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11.5px; color: var(--ink-3); }
+
+  /* ---- tâches ---- */
+  ul.tasks { list-style: none; }
+  .task {
+    display: grid; grid-template-columns: 44px 1fr auto;
+    align-items: center; gap: 12px;
+    padding: 9px 4px; border-top: 1px solid var(--edge-soft);
+    transition: opacity 0.2s ease;
+  }
+  .task .id {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12px; color: var(--ink-3);
+  }
+  .task .lbl { font-size: 14px; }
+  .task .lbl small { display: block; font-size: 12px; color: var(--ink-3); }
+  .task[data-status="fait"] .lbl { color: var(--ink-3); text-decoration: line-through; text-decoration-color: rgba(62, 139, 255, 0.55); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+    padding: 3px 11px 3px 8px; border-radius: 100px; white-space: nowrap;
+  }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.fait     { color: #9cc4ff; background: rgba(62, 139, 255, 0.14); border: 1px solid rgba(62, 139, 255, 0.35); }
+  .chip.encours  { color: #ff98a2; background: rgba(255, 59, 78, 0.14);  border: 1px solid rgba(255, 59, 78, 0.40); }
+  .chip.encours::before { animation: pulse 1.6s ease-in-out infinite; }
+  .chip.afaire   { color: #8fe8a4; background: rgba(61, 220, 91, 0.10);  border: 1px solid rgba(61, 220, 91, 0.30); }
+  .chip.jeu      { color: #c9adff; background: rgba(155, 109, 255, 0.13); border: 1px solid rgba(155, 109, 255, 0.35); }
+  .chip.decision { color: #eef2ff; background: rgba(244, 247, 255, 0.10); border: 1px solid rgba(244, 247, 255, 0.30); }
+
+  body[data-filter] .task { opacity: 0.22; }
+  body[data-filter="fait"]     .task[data-status="fait"],
+  body[data-filter="encours"]  .task[data-status="encours"],
+  body[data-filter="afaire"]   .task[data-status="afaire"],
+  body[data-filter="jeu"]      .task[data-status="jeu"],
+  body[data-filter="decision"] .task[data-status="decision"] { opacity: 1; }
+
+  footer {
+    margin-top: 34px; text-align: center;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11.5px; color: var(--ink-3);
+  }
+
+  /* ---- entrée en scène ---- */
+  @media (prefers-reduced-motion: no-preference) {
+    .glass { animation: rise 0.5s ease backwards; }
+    .grid .epic:nth-child(1) { animation-delay: 0.05s; }
+    .grid .epic:nth-child(2) { animation-delay: 0.10s; }
+    .grid .epic:nth-child(3) { animation-delay: 0.15s; }
+    .grid .epic:nth-child(4) { animation-delay: 0.20s; }
+    .grid .epic:nth-child(5) { animation-delay: 0.25s; }
+    .grid .epic:nth-child(6) { animation-delay: 0.30s; }
+    .grid .epic:nth-child(7) { animation-delay: 0.35s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 24px 14px 60px; }
+    header.glass { padding: 24px 22px; }
+    .epic { padding: 20px 18px 14px; }
+    .task { grid-template-columns: 36px 1fr; }
+    .task .chip { grid-column: 2; justify-self: start; margin-top: 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="scene" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <header class="glass">
+    <p class="eyebrow">SF6-GIFMaker · plan de reprise · 2026-07-03</p>
+    <h1>Hitboxes du roster, <span class="thin">move par move.</span></h1>
+    <p class="sub">Reprise du travail de Matis : couvrir 100&nbsp;% des moves et variantes des 30 persos
+      — GIF hitbox, sprite sheets, stepper frame-par-frame — jusqu'à la livraison FDA.
+      Ce tableau suit chaque epic et sous-tâche pour ne rien oublier.</p>
+    <div class="meta">
+      <span>branche&nbsp;: <a href="https://github.com/MatisDembele/SF6-GIFMaker" rel="noopener">phase1-capture-pipeline</a></span>
+      <span>reprise Wael×Claude&nbsp;: branche <b>rt50</b> · f4a7855 · 2026-07-03 (base Matis&nbsp;: f08960c)</span>
+      <span>réf&nbsp;: REMISE-A-PLAT.md (v0)</span>
+    </div>
+
+    <div class="meter-block">
+      <div class="meter-label">
+        <span>frame meter du projet — 1 segment = 1 tâche</span>
+        <span id="tally"></span>
+      </div>
+      <div class="meter" id="meter-global" role="img" aria-label="Progression globale du projet, une barre par tâche"></div>
+      <div class="legend" id="legend">
+        <button data-f="afaire"><span class="dot" style="background:var(--startup)"></span><b id="n-afaire"></b>&nbsp;à faire</button>
+        <button data-f="encours"><span class="dot" style="background:var(--active)"></span><b id="n-encours"></b>&nbsp;en cours</button>
+        <button data-f="fait"><span class="dot" style="background:var(--recovery)"></span><b id="n-fait"></b>&nbsp;fait</button>
+        <button data-f="jeu"><span class="dot" style="background:var(--armor)"></span><b id="n-jeu"></b>&nbsp;attente jeu</button>
+        <button data-f="decision"><span class="dot" style="background:var(--invinc)"></span><b id="n-decision"></b>&nbsp;décision</button>
+        <span class="hint">Couleurs du frame meter in-game (échantillonnées par le pipeline)&nbsp;:
+          startup&nbsp;=&nbsp;à faire, active&nbsp;=&nbsp;en cours, recovery&nbsp;=&nbsp;fait,
+          armure&nbsp;=&nbsp;en attente du jeu / d'une confirmation, invincible&nbsp;=&nbsp;décision à trancher.
+          Cliquer un statut pour filtrer.</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="next glass">
+    <span class="k">Next&nbsp;up</span>
+    <span><b>OBJECTIF (précisé par Wael)&nbsp;: le SITE avec TOUS les persos</b> — pas de
+      livraison FDA. Le site est <b>multi-persos</b> (sélecteur), Ryu 60/60 en ligne&nbsp;:
+      <a href="stepper.html">stepper.html</a>. Next&nbsp;: <b>CAPTURE ROSTER (auto)</b> —
+      le mode mains-libres du recorder, basculé sur RT50 (switch perso → capture → suivant),
+      avec <code>--save-scale 0.5</code> à valider sur le premier perso.</span>
+  </div>
+
+  <div class="grid">
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 0 · Reprise</p>
+          <h2>Environnement &amp; état des lieux</h2>
+        </div>
+        <span class="prio p0">P0</span>
+      </div>
+      <p class="desc">Remettre la machine de Wael en état de faire tourner tout le pipeline de Matis.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="fait"><span class="id">0.1</span><span class="lbl">Rapatrier le repo (branche <code>phase1-capture-pipeline</code>)</span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.2</span><span class="lbl">État des lieux — commits, docs, croisement REMISE-À-PLAT</span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.3</span><span class="lbl">Tableau de bord + publication GitHub Pages <small>wael3rd.github.io/sf6-gifmaker-board</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.4</span><span class="lbl">Installer les dépendances Python <small>déjà en place : numpy, Pillow, mss, pywin32, ffmpeg</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.5</span><span class="lbl">Lancer les 7 suites de self-tests <small>7/7 vertes après fix UTF-8 + réalignement test_capturelist (1.7)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.6</span><span class="lbl">Figer la config machine <small>env vars User posées : SF6_DIR (Steam C:), SF6_FRAMES=C:\sf6frames, SF6_OUT=C:\sf6out (195 Go libres)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.7</span><span class="lbl">Déployer le setup jeu <small>install.py OK : GIFCapture + 30 movelists + roster + hitbox viewer (vendor) déployés</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">0.8</span><span class="lbl">Récupérer le <code>SF6_MoveRecorder.lua</code> de Matis <small>v55 reçue et déployée · rangée dans .combomaker-ref/ (gitignoré) · install.py --check : 4/4 prérequis OK</small></span><span class="chip fait">Fait</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 1 · Dette §7</p>
+          <h2>Solder la dette technique</h2>
+        </div>
+        <span class="prio p0">P0</span>
+      </div>
+      <p class="desc">Les points relevés dans la remise à plat — certains semblent déjà corrigés, à confirmer dans le code.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="fait"><span class="id">1.1</span><span class="lbl">Fix <code>build_sheets</code> double préfixe <small>déjà corrigé : base idempotente, build_sheets.py:342</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">1.2</span><span class="lbl">Purge des <code>move_*.json</code> périmés de gifcap <small>déjà corrigé : purge par défaut au démarrage, capture.py:394</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">1.3</span><span class="lbl">Fix UTF-8 console cp1252 <small>verify_capture déjà OK ; guard ajouté aux 7 suites de tests (f1f90e9)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">1.4</span><span class="lbl">Fix re-capture — PNG résiduels mélangés <small>commits c9216b5 + f08960c, test de non-régression inclus</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="jeu"><span class="id">1.5</span><span class="lbl">Supprimer la capture Akuma périmée <small>43 Go sur le D: de la machine de Matis — pas actionnable ici</small></span><span class="chip jeu">Attente</span></li>
+        <li class="task" data-status="afaire"><span class="id">1.6</span><span class="lbl">Consolider les docs éparses <small>NOTES / PLAN / SCALING / EDGE-CASES → REMISE-À-PLAT</small></span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="fait"><span class="id">1.7</span><span class="lbl">Réaligner <code>test_capturelist</code> sur le pipeline officiel <small>2 045 faux échecs (schéma BCM périmé) → 7/7 vertes, commit f1f90e9</small></span><span class="chip fait">Fait</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic R · Refonte capture</p>
+          <h2>Système RT50 — temps réel, auto-réparé</h2>
+        </div>
+        <span class="prio p0">P0</span>
+      </div>
+      <p class="desc">Décision Wael : jamais geler le jeu (le frame-step déformait la barre ×5). Jeu réel à 50 %, verdict de complétude par move, retry automatique. Branche <code>rt50</code>.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="fait"><span class="id">R.1</span><span class="lbl">Définir + construire RT50 <small>docs/RT50.md · bouton CAPTURE RT50 · frame data juste en 1 passe (bar_trusted)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.2</span><span class="lbl">Grabber dxcam + écriture PNG store <small>~70 photos/s mesuré (vs 35 mss) + fin du blocage de file — les 2 causes de trous</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.3</span><span class="lbl">Verdict <code>complete</code> par move <small>capture.py : idle_flush 2 s + frame 1 + zéro trou + total atteint</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.4</span><span class="lbl">Boucle de réparation <small>build_retry_list.py : --deploy rejoue seulement les ratés (idx alignés), --restore</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.5</span><span class="lbl">Test 6 normaux : <b>6/6 complete, zéro trou</b> <small>~28 s pour 6 moves → perso complet ≈ 5 min · frame data réelle (su officiel −1 : convention à trancher avec Matis)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.6</span><span class="lbl">Hurtbox par phase, frame-exact <small>palette SheldonsBoxes (idle vert neutre / startup vif / recovery bleu…) + sortie act_st==0 — plus précis que SheldonsBoxes d'origine</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.7</span><span class="lbl">Test barre cachée <small>12/12 complete, frame data IDENTIQUE avec/sans HUD (le widget vit même masqué) → production = HUD masqué</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.8</span><span class="lbl">Supers/projectiles validés <small>SA1 : P2 à 490 (frame data projectile juste), caméra lockée pré-rendu, trim move_end (act_st→0) mesuré à la frame près, fragmentation résolue — 7/7 complete + move_end partout</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.9</span><span class="lbl">CAPTURE RT50 complet Ryu <small>54/60 au 1er run + retry — 57 coups livrés, 4 444 frames, 25,8 Go</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.10</span><span class="lbl">SITE stepper gaté par mot de passe <small>57 coups, sections du jeu, règle Wael (que les frames de la barre), AES-GCM — RETIRÉ du site le 2026-07-04 (demande Wael, historique purgé) ; republication après le run complet</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.10b</span><span class="lbl">Frame data 100&nbsp;% RECORDING (exigence Wael) <small>meter_cells = dump de la barre après chaque coup (ring 80, dumps idle 10/25/39) + segments notés EN LIVE (survivent au wrap) + fiche site (texte de barre, total jeu, jauges, déplacement) — validé 7 coups : 5MP corrigé à 22 frames (Capcom dit 20), SA1 su 7 / act 32 / rec 48. La page officielle Capcom n'est plus qu'un repli. Portée in-game ABANDONNÉE (rects d'attaque introuvables en pilotage recorder — si besoin un jour : voie statique, fichiers du jeu)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.9bis</span><span class="lbl">Run COMPLET Ryu <small>55/55 complets ZÉRO trou (meilleur run à ce jour — retry : 2 coups, tout récupéré) · 55 GIF+webp régénérés · phases 100 % recording (41 barre dumpée + 14 live, plus AUCUN repli Capcom) · crouchs élucidés : 5 frames de relevé après la barre, coupées (règle Wael) · site republié</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="fait"><span class="id">R.11</span><span class="lbl">FIX AUTOMATION — <b>RYU 60/60</b> <small>① vie normalisée par coup (flag façon denjin + remise à 100 % à chaque passe : le Vital_Point training survit à Reset Scripts) → SA3 et CA distincts ② jauge : non-problème une fois ① réglé (SA infinie aux réglages) ③ LP fantôme : les séquences d'inputs jouaient 2× trop vite en RT50 → pas des holds DOUBLÉS (ciblé : doubler TOUTES les seqs cassait les specials) ④ non-bloquant (meter_cells) ⑤ trous frame-2 : c'était les I/O du grabber au 1er frame (mkdir+manifest dans la boucle de grab) → tout pré-créé au démarrage, finalisation différée → 60/60 zéro trou</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="jeu"><span class="id">R.12</span><span class="lbl">Merger <code>rt50</code> dans <code>phase1-capture-pipeline</code> <small><b>PR #2 ouverte</b> (github.com/MatisDembele/SF6-GIFMaker/pull/2) — 40+ commits, fast-forward sans conflit, frame-step intact en fallback. En attente de la relecture de Matis</small></span><span class="chip jeu">Attente Matis</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 2 · Décision #3</p>
+          <h2>Valider la basse résolution</h2>
+        </div>
+        <span class="prio p0">P0</span>
+      </div>
+      <p class="desc">Le verrou de l'exhaustivité : diviser disque et temps par ~3-4 si les hitboxes restent nettes à 768px.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="jeu"><span class="id">2.1</span><span class="lbl">Capturer un échantillon Ryu en 720p et 540p</span><span class="chip jeu">Attente jeu</span></li>
+        <li class="task" data-status="encours"><span class="id">2.2</span><span class="lbl">Downscale 768px + comparaison de netteté des hitboxes <small>outil prêt : tools/compare_sharpness.py (verdict Laplacien sur overlay, selftest vert) — attend les captures 2.1</small></span><span class="chip encours">En cours</span></li>
+        <li class="task" data-status="fait"><span class="id">2.3</span><span class="lbl">Trancher la résolution + mesurer le gain réel <small>mesuré HORS JEU sur les captures Ryu : PNG stockés à 0,5× = marqueur décodé 10/10, 6,22 → 1,56 Mo/frame, ~30 → ~7,5 Go/perso (mieux que l'objectif) — sortie finale IDENTIQUE (les GIF étaient déjà en scale-factor 0,5)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="jeu"><span class="id">2.4</span><span class="lbl">Figer le réglage dans la config du pipeline <small><code>capture.py --save-scale 0.5</code> implémenté (réduction hors boucle de grab, décodage marqueur en pleine résolution) — à valider sur le prochain perso capturé, puis en faire le défaut</small></span><span class="chip jeu">Attente jeu</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 3 · P0 roadmap</p>
+          <h2>Chaîne complète sur Ryu</h2>
+        </div>
+        <span class="prio p0">P0</span>
+      </div>
+      <p class="desc">Prouver le bout en bout sur 1 perso : 0 trou, 0 stale, jusqu'au produit livré dans FDA.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="fait"><span class="id">3.1</span><span class="lbl">Purge de l'état gifcap avant capture <small>automatique au démarrage de capture.py (fix Matis)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="jeu"><span class="id">3.2</span><span class="lbl">Capture complète Ryu <small>→ absorbée par R.9 (CAPTURE RT50 + boucle retry)</small></span><span class="chip jeu">Attente jeu</span></li>
+        <li class="task" data-status="afaire"><span class="id">3.3</span><span class="lbl">Encode GIF/webp + sheets + frames.json + stepper</span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="fait"><span class="id">3.4</span><span class="lbl">Livraison — <b>recadré par Wael : le SITE multi-persos</b>, pas FDA <small>sélecteur de perso + chars.json + moves_&lt;char&gt;_v2.json — Ryu en ligne, chaque perso du roster s'ajoute via generate_site.py (la livraison FDA n'est plus un objectif)</small></span><span class="chip fait">Fait</span></li>
+        <li class="task" data-status="afaire"><span class="id">3.5</span><span class="lbl">Cross-check des données vs ComboMaker <small>BCM triggers, .msg, ordre des target combos</small></span><span class="chip afaire">À faire</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 4 · P1 roadmap</p>
+          <h2>Roster cœur ×30</h2>
+        </div>
+        <span class="prio">P1</span>
+      </div>
+      <p class="desc">Le moveset jouable de chaque perso, en boucle autonome, avec la boucle disque.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="jeu"><span class="id">4.1</span><span class="lbl">Boucle autonome <code>watch</code> sur le roster <small>capture → encode → vérifie → libère le disque, perso par perso</small></span><span class="chip jeu">Attente jeu</span></li>
+        <li class="task" data-status="afaire"><span class="id">4.2</span><span class="lbl">QA par perso <small>verify_capture : gap-free, stale, GIF vides</small></span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="afaire"><span class="id">4.3</span><span class="lbl">Crops des persos atypiques <small>Zangief, Dhalsim… via crop_preview → charcrop_&lt;char&gt;.json</small></span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="afaire"><span class="id">4.4</span><span class="lbl">Livraison FDA perso par perso</span><span class="chip afaire">À faire</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 5 · P2 roadmap</p>
+          <h2>Feature séquence — les 152</h2>
+        </div>
+        <span class="prio">P2</span>
+      </div>
+      <p class="desc">Moves multi-étapes du recorder : 111 stance follow-ups + 41 target combos, l'objectif exhaustif.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="afaire"><span class="id">5.1</span><span class="lbl">Spécifier la feature séquence <small>stance puis bouton ; chaînes hit1→hit2→hit3 avec timing de cancel</small></span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="afaire"><span class="id">5.2</span><span class="lbl">Implémenter côté recorder Lua <small>données dispo : input_commands « HP &gt; HK » + bcm_triggers</small></span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="jeu"><span class="id">5.3</span><span class="lbl">Capturer les 41 target combos</span><span class="chip jeu">Attente jeu</span></li>
+        <li class="task" data-status="jeu"><span class="id">5.4</span><span class="lbl">Capturer les 111 stance follow-ups</span><span class="chip jeu">Attente jeu</span></li>
+      </ul>
+    </section>
+
+    <section class="epic glass">
+      <div class="epic-head">
+        <div>
+          <p class="eyebrow">Epic 6 · P3 roadmap</p>
+          <h2>Variantes restantes &amp; polish</h2>
+        </div>
+        <span class="prio">P3</span>
+      </div>
+      <p class="desc">La longue traîne finale, plus les décisions ouvertes (§8) à trancher en chemin.</p>
+      <div class="meter mini" aria-hidden="true"></div>
+      <ul class="tasks">
+        <li class="task" data-status="jeu"><span class="id">6.1</span><span class="lbl">Raging Demon <small>capture manuelle</small></span><span class="chip jeu">Attente jeu</span></li>
+        <li class="task" data-status="afaire"><span class="id">6.2</span><span class="lbl">Tuning du crop morphologique</span><span class="chip afaire">À faire</span></li>
+        <li class="task" data-status="decision"><span class="id">6.3</span><span class="lbl">Coups communs <small>capturer une fois (set générique) ou pas du tout ?</small></span><span class="chip decision">Décision</span></li>
+        <li class="task" data-status="decision"><span class="id">6.4</span><span class="lbl">Frame data du stepper <small>barre mesurée (par perso) vs scrape officiel — pour quels champs ?</small></span><span class="chip decision">Décision</span></li>
+      </ul>
+    </section>
+
+  </div>
+
+  <footer>
+    généré le 2026-07-03 · SF6-GIFMaker · Wael × Matis × Claude ·
+    statuts mis à jour à chaque session de travail
+  </footer>
+
+</div>
+
+<script>
+  // Construit le frame meter global + les mini-meters d'epic depuis les tâches du DOM.
+  const tasks = [...document.querySelectorAll('.task')];
+  const globalMeter = document.getElementById('meter-global');
+  tasks.forEach(t => {
+    const s = document.createElement('span');
+    s.dataset.s = t.dataset.status;
+    s.title = t.querySelector('.id').textContent + ' — ' + t.querySelector('.lbl').firstChild.textContent.trim();
+    globalMeter.appendChild(s);
+  });
+  document.querySelectorAll('.epic').forEach(epic => {
+    const mini = epic.querySelector('.meter.mini');
+    epic.querySelectorAll('.task').forEach(t => {
+      const s = document.createElement('span');
+      s.dataset.s = t.dataset.status;
+      mini.appendChild(s);
+    });
+  });
+
+  // Compteurs
+  const count = st => tasks.filter(t => t.dataset.status === st).length;
+  ['fait', 'encours', 'afaire', 'jeu', 'decision'].forEach(st => {
+    document.getElementById('n-' + st).textContent = count(st);
+  });
+  document.getElementById('tally').textContent =
+    count('fait') + ' / ' + tasks.length + ' fait';
+
+  // Filtres par statut (légende)
+  document.getElementById('legend').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-f]');
+    if (!btn) return;
+    const f = btn.dataset.f;
+    const already = document.body.dataset.filter === f;
+    document.querySelectorAll('.legend button').forEach(b => b.classList.remove('on'));
+    if (already) {
+      delete document.body.dataset.filter;
+    } else {
+      document.body.dataset.filter = f;
+      btn.classList.add('on');
+    }
+  });
+</script>
+</body>
+</html>
